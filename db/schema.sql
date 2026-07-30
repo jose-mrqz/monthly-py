@@ -11,21 +11,20 @@ CREATE TABLE tenant (
   brand_name text,
   location_name text,
   document_number text,
-  report_kind integer not null references report_kind(id),
+  created_at text default current_timestamp
+);
+CREATE TABLE tenant_report_kind(
+  id integer primary key autoincrement,
+  tenant_id integer not null references tenant(id),
+  report_kind_id integer not null references report_kind(id),
   created_at text default current_timestamp
 );
 CREATE TABLE report_kind (
   id integer primary key autoincrement,
   name text not null,
-  display_name text not null,
-  is_daily integer not null,
-  reports_amount integer not null,
-  reports_transactions integer not null,
-  reports_modules_amount integer not null,
-  reports_modules_transactions integer not null,
-  created_at text default current_timestamp
+  display_name text not null
 );
-CREATE TABLE sale_report (
+CREATE TABLE report (
   id integer primary key autoincrement,
   date text not null,
   amount real,
@@ -33,7 +32,25 @@ CREATE TABLE sale_report (
   modules_amount real,
   modules_transactions integer,
   tenant_id integer not null references tenant(id),
+  report_kind_id integer not null references report_kind(id),
   created_at text default current_timestamp
+);
+CREATE UNIQUE INDEX report_tenant_kind_date_unique
+  on report (tenant_id, report_kind_id, date);
+CREATE TABLE record (
+  id integer primary key autoincrement,
+  report_id integer not null references report(id),
+  date text not null,
+  previous_amount real,
+  amount real,
+  previous_transactions integer,
+  transactions integer,
+  previous_modules_amount real,
+  modules_amount real,
+  previous_modules_transactions integer,
+  modules_transactions integer,
+  created_at text default current_timestamp,
+  username text default 'system'
 );
 -- Dbmate schema migrations
 INSERT INTO "schema_migrations" (version) VALUES

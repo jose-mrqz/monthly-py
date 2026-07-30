@@ -4,6 +4,7 @@ export type Tenant = {
     documentNumber: string
     brandName: string
     locationName: string
+    reportKind: ReportKind
 }
 
 export type Period = {
@@ -11,33 +12,69 @@ export type Period = {
     year: number
 }
 
-export type ReportKind = {
-    id?: number
-    name: string
-    displayName: string
-    isDaily: boolean
-    reportsAmount: boolean
-    reportsTransactions: boolean
-    reportsModulesAmount: boolean
-    reportsModulesTransactions: boolean
+export enum ReportKind {
+    Monthly = "monthly",
+    MonthlyAmountOnly = "monthly_amount_only",
+    MonthlyWithModules = "monthly_with_modules",
+    MonthlyDaily = "monthly_daily"
 }
 
-export type Sale = {
-    id?: number
+export const parseReportKind = (str: string): ReportKind => {
+    switch (str) {
+        case "monthly": return ReportKind.Monthly
+        case "monthly_amount_only": return ReportKind.MonthlyAmountOnly
+        case "monthly_with_modules": return ReportKind.MonthlyWithModules
+        case "monthly_daily": return ReportKind.MonthlyDaily
+        default: throw new Error(`Invalid report kind: ${str}`)
+    }
+};
+
+
+export type MonthlySale = {
     tenantId: number
     period: Period
-    amount?: number
-    transactions?: number
-    modulesAmount?: number
-    modulesTransactions?: number
+    amount: number
+    transactions: number
 }
 
-export type SaleDTO = {
+
+export type MonthlySaleAmountOnly = {
+    tenantId: number
+    period: Period
     amount: number
-    transactions?: number
-    modulesAmount?: number
-    modulesTransactions?: number
 }
+
+
+export type MonthlySaleWithModules = {
+    tenantId: number
+    period: Period
+    amount: number
+    transactions: number
+    modulesAmount: number
+    modulesTransactions: number
+}
+
+export type DailySale = {
+    tenantId: number
+    date: Date
+    amount: number
+    transactions: number
+}
+
+
+export type MonthlySaleDaily = {
+    tenantId: number
+    period: Period
+    dailyReports: DailySale[]
+}
+
+
+export type SaleInput =
+    | { kind: ReportKind.Monthly; tenantId: number; period: Period; amount: number; transactions: number }
+    | { kind: ReportKind.MonthlyAmountOnly; tenantId: number; period: Period; amount: number }
+    | { kind: ReportKind.MonthlyWithModules; tenantId: number; period: Period; amount: number; transactions: number; modulesAmount: number; modulesTransactions: number }
+    | { kind: ReportKind.MonthlyDaily; tenantId: number; period: Period; days: DailySale[] }
+
 
 export const createPeriod = (month: number, year: number): Period => {
     if (!Number.isInteger(month) || month < 1 || month > 12) {

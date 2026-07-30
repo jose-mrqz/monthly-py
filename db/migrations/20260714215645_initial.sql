@@ -12,24 +12,23 @@ create table tenant (
   brand_name text,
   location_name text,
   document_number text,
-  report_kind integer not null references report_kind(id),
+  created_at text default current_timestamp
+);
+
+create table tenant_report_kind(
+  id integer primary key autoincrement,
+  tenant_id integer not null references tenant(id),
+  report_kind_id integer not null references report_kind(id),
   created_at text default current_timestamp
 );
 
 create table report_kind (
   id integer primary key autoincrement,
   name text not null,
-  display_name text not null,
-  is_daily integer not null,
-  reports_amount integer not null,
-  reports_transactions integer not null,
-  reports_modules_amount integer not null,
-  reports_modules_transactions integer not null,
-  created_at text default current_timestamp
+  display_name text not null
 );
 
-
-create table sale_report (
+create table report (
   id integer primary key autoincrement,
   date text not null,
   amount real,
@@ -37,12 +36,35 @@ create table sale_report (
   modules_amount real,
   modules_transactions integer,
   tenant_id integer not null references tenant(id),
+  report_kind_id integer not null references report_kind(id),
   created_at text default current_timestamp
 );
 
+create unique index report_tenant_kind_date_unique
+  on report (tenant_id, report_kind_id, date);
+
+create table record (
+  id integer primary key autoincrement,
+  report_id integer not null references report(id),
+  date text not null,
+  previous_amount real,
+  amount real,
+  previous_transactions integer,
+  transactions integer,
+  previous_modules_amount real,
+  modules_amount real,
+  previous_modules_transactions integer,
+  modules_transactions integer,
+  created_at text default current_timestamp,
+  username text default 'system'
+);
+
+
 
 -- migrate:down
-drop table if exists sale_report;
+drop index if exists report_tenant_kind_date_unique;
+drop table if exists report;
+drop table if exists tenant_report_kind;
 drop table if exists tenant;
 drop table if exists user;
 drop table if exists report_kind;

@@ -6,9 +6,6 @@ export const TenantService = {
         return TenantRepository.list()
     },
     getTenantById: (tenantId: number): Tenant | null => {
-        return TenantRepository.get(tenantId)
-    },
-    getTenantReportKind: (tenantId: number): ReportKind => {
-        return TenantRepository.getTenantReportKind(tenantId)
+    return TenantRepository.get(tenantId)
     }
 }

@@ -14,7 +14,7 @@ export const TenantRow: FC<TenantRowProps> = ({ tenant, url }) => {
       <td>{tenant.brandName}</td>
       <td>{tenant.locationName}</td>
       <td class="text-right">
-        <a href={url} class="btn btn-sm btn-primary">Registrar ventas</a>
+        <a href={url} class="btn btn-sm btn-primary">Editar reporte</a>
       </td>
     </tr>
   )
