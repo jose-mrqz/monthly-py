@@ -30,8 +30,11 @@ async function signin_post(c: Context) {
     )
   }
 
-  // FIXME: Compute year-month for today's URL.
-  return c.redirect('/year/2025/month/08/tenant/list/')
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+
+  return c.redirect(`/year/${year}/month/${month}/tenant/list/`)
 }
 
 type UserRow = {
