@@ -1,12 +1,12 @@
 import { Hono, Context } from 'hono'
 import { db } from '../db'
-import { initialize_o365_handlers } from './auth/o365'
+import { o365_router } from './auth/o365'
 
-export function initialize_handlers(app: Hono): void {
-  app.get('/monthly-py/auth/signin/', signin_get);
-  app.post('/monthly-py/auth/signin/', signin_post);
-  initialize_o365_handlers(app);
-}
+export const auth_router = new Hono()
+  .get('/signin/', signin_get)
+  .post('/signin/', signin_post)
+
+auth_router.route('/o365', o365_router)
 
 async function signin_get(c: Context) {
   const error = c.req.query('error')

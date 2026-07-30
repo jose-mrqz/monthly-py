@@ -2,10 +2,9 @@ import { Hono, Context } from 'hono'
 import { db } from '../../db'
 import { hash_password, find_user_by_username } from '../auth'
 
-export function initialize_o365_handlers(app: Hono): void {
-  app.get('/monthly-py/auth/o365/signin/', o365_signin_get);
-  app.post('/monthly-py/auth/o365/validate/', o365_validate_post);
-}
+export const o365_router = new Hono()
+  .get('/signin/', o365_signin_get)
+  .post('/validate/', o365_validate_post)
 
 type O365Config = {
   clientId: string
