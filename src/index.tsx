@@ -19,9 +19,12 @@ import {
 import { SaleService } from './services/monthly-sale.service'
 import { SaleInput } from './types'
 
-import { initialize_handlers as initialize_auth_handlers } from './handlers/auth'
+import { auth_router } from './handlers/auth'
 
-const app = new Hono();
+const app = new Hono()
+
+
+app.route('/monthly-py/auth', auth_router)
 
 
 app.get('/', (c) => {
@@ -32,9 +35,6 @@ app.get('/', (c) => {
 app.get('/healthcheck/', (c) => {
   return c.json({ status: 'ok', message: 'cheers 🍻' })
 })
-
-
-initialize_auth_handlers(app);
 
 
 app.get('/year/:year/month/:month/tenant/list/', async (c) => {

@@ -1,12 +1,12 @@
 import { Hono, Context } from 'hono'
 import { db } from '../db'
-import { initialize_o365_handlers } from './auth/o365'
+import { o365_router } from './auth/o365'
 
-export function initialize_handlers(app: Hono): void {
-  app.get('/monthly-py/auth/signin/', signin_get);
-  app.post('/monthly-py/auth/signin/', signin_post);
-  initialize_o365_handlers(app);
-}
+export const auth_router = new Hono()
+  .get('/signin/', signin_get)
+  .post('/signin/', signin_post)
+
+auth_router.route('/o365', o365_router)
 
 async function signin_get(c: Context) {
   const error = c.req.query('error')
@@ -30,8 +30,11 @@ async function signin_post(c: Context) {
     )
   }
 
-  // FIXME: Compute year-month for today's URL.
-  return c.redirect('/year/2025/month/08/tenant/list/')
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+
+  return c.redirect(`/year/${year}/month/${month}/tenant/list/`)
 }
 
 type UserRow = {
