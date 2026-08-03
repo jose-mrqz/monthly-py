@@ -6,7 +6,7 @@ export const SaleService = {
     findExisting: (tenant: Tenant, period: Period): SaleInput | null => {
         return SaleRepository.find(tenant.id, period, tenant.reportKind)
     },
-    store: (input: SaleInput): void => {
-        SaleRepository.store(input)
+    store: (input: SaleInput, username: string): void => {
+        SaleRepository.store(input, username)
     }
 }

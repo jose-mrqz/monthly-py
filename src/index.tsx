@@ -7,7 +7,7 @@ import { MonthlySaleForm } from './components/MonthlySaleForm';
 import { MonthlyAmountOnlyForm } from './components/MonthlyAmountOnlyForm';
 import { MonthlyWithModulesForm } from './components/MonthlyWithModulesForm';
 import { MonthlyDailyForm, MonthlyDailyFormValues } from './components/MonthlyDailyForm';
-import { createPeriod, Period, ReportKind, Tenant } from './types'
+import { createPeriod, Period, ReportKind, Tenant, shiftPeriod, tenantListHref, currentPeriodTenantListHref, salesReportHref, monthNameEs } from './types'
 import {
   parseMonthlySaleForm,
   parseMonthlyAmountOnlyForm,
@@ -20,14 +20,24 @@ import { SaleService } from './services/monthly-sale.service'
 import { SaleInput } from './types'
 
 import { auth_router } from './handlers/auth'
+import { session, type AppEnv } from './middleware/session'
+import { authRequired } from './middleware/auth-required'
 
-const app = new Hono()
+const app = new Hono<{ Variables: AppEnv['Variables'] }>()
+
+app.use('*', session)
+
+
+app.use('*', authRequired)
 
 
 app.route('/monthly-py/auth', auth_router)
 
 
 app.get('/', (c) => {
+  if (c.get('session').get('userId')) {
+    return c.redirect(currentPeriodTenantListHref());
+  }
   return c.redirect('/monthly-py/auth/signin/');
 });
 
@@ -37,15 +47,19 @@ app.get('/healthcheck/', (c) => {
 })
 
 
-app.get('/year/:year/month/:month/tenant/list/', async (c) => {
+app.get('/monthly-py/year/:year/month/:month/tenant/list/', async (c) => {
   const { year, month } = c.req.param()
   const period = createPeriod(Number(month), Number(year))
   const tenants = TenantService.listTenants()
+  const periodNav = {
+    prevHref: tenantListHref(shiftPeriod(period, -1)),
+    nextHref: tenantListHref(shiftPeriod(period, 1)),
+  }
   return c.html(
-    <Layout>
+    <Layout currentUsername={c.get('session').get('username') ?? undefined} periodNav={periodNav}>
       <div class="mx-auto max-w-7xl">
         <div class="mb-4">
-          <h1 class="text-2xl font-semibold">Locales — {period.month}/{period.year}</h1>
+          <h1 class="text-2xl font-semibold">Locales — {monthNameEs(period.month)} {period.year}</h1>
           <p class="mt-1 text-sm opacity-60">Selecciona un local para registrar o editar su reporte de ventas</p>
         </div>
         <div class="card bg-base-100 shadow-sm">
@@ -63,7 +77,7 @@ app.get('/year/:year/month/:month/tenant/list/', async (c) => {
                 </thead>
                 <tbody>
                   {tenants.map((tenant) => (
-                    <TenantRow tenant={tenant} url={`/year/${period.year}/month/${period.month}/tenant/${tenant.id}/sales-report/create/`}></TenantRow>
+                    <TenantRow tenant={tenant} url={salesReportHref(period, tenant.id)}></TenantRow>
                   ))}
                 </tbody>
               </table>
@@ -242,7 +256,7 @@ const parseForKind = (
 }
 
 
-app.get('/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async (c) => {
+app.get('/monthly-py/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async (c) => {
   const { tenantId, year, month } = c.req.param()
   const period = createPeriod(Number(month), Number(year))
   const tenant = TenantService.getTenantById(Number(tenantId))
@@ -251,17 +265,17 @@ app.get('/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async 
     return c.json({ status: 'error', message: 'Tenant not found' }, 404)
   }
 
-  const url = `/year/${period.year}/month/${period.month}/tenant/${tenant.id}/sales-report/create/`
-  const backHref = `/year/${period.year}/month/${period.month}/tenant/list/`
+  const url = salesReportHref(period, tenant.id)
+  const backHref = tenantListHref(period)
   const existing = SaleService.findExisting(tenant, period)
   const values = existing ? valuesFromExisting(existing, period) : emptyValuesFor(tenant.reportKind, period)
 
   return c.html(
-    <Layout backHref={backHref}>
+    <Layout backHref={backHref} currentUsername={c.get('session').get('username') ?? undefined}>
       <div class="mx-auto max-w-3xl">
         <div class="mb-4">
           <h1 class="text-2xl font-semibold">Reporte de ventas</h1>
-          <p class="mt-1 text-sm opacity-60">{tenant.tenantName} — {period.month}/{period.year}</p>
+          <p class="mt-1 text-sm opacity-60">{tenant.tenantName} — {monthNameEs(period.month)} {period.year}</p>
         </div>
         {existing && (
           <div class="alert alert-info alert-sm mb-3">
@@ -279,7 +293,7 @@ app.get('/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async 
 })
 
 
-app.post('/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async (c) => {
+app.post('/monthly-py/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async (c) => {
   const { tenantId, year, month } = c.req.param()
   const period = createPeriod(Number(month), Number(year))
   const tenant = TenantService.getTenantById(Number(tenantId))
@@ -289,13 +303,13 @@ app.post('/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async
     return c.json({ status: 'error', message: 'Tenant not found' }, 404)
   }
 
-  const url = `/year/${period.year}/month/${period.month}/tenant/${tenant.id}/sales-report/create/`
-  const backHref = `/year/${period.year}/month/${period.month}/tenant/list/`
+  const url = salesReportHref(period, tenant.id)
+  const backHref = tenantListHref(period)
   const result = parseForKind(tenant.reportKind, formData, tenant.id, period)
 
   if (!result.ok) {
     return c.html(
-      <Layout backHref={backHref}>
+      <Layout backHref={backHref} currentUsername={c.get('session').get('username') ?? undefined}>
         <div class="mx-auto max-w-3xl">
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body gap-3 p-4">
@@ -313,8 +327,8 @@ app.post('/year/:year/month/:month/tenant/:tenantId/sales-report/create/', async
     )
   }
 
-  SaleService.store(result.data)
-  return c.redirect(`/year/${period.year}/month/${period.month}/tenant/list/`)
+  SaleService.store(result.data, c.get('session').get('username')!)
+  return c.redirect(tenantListHref(period))
 })
 
 

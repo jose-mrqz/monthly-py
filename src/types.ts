@@ -85,3 +85,33 @@ export const createPeriod = (month: number, year: number): Period => {
     }
     return { month, year }
 }
+
+export const shiftPeriod = (period: Period, deltaMonths: number): Period => {
+    const d = new Date(period.year, period.month - 1 + deltaMonths, 1)
+    return { year: d.getFullYear(), month: d.getMonth() + 1 }
+}
+
+export const tenantListHref = (period: Period): string => {
+    return `/monthly-py/year/${period.year}/month/${period.month}/tenant/list/`
+}
+
+const MONTH_NAMES_ES = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+] as const
+
+export const monthNameEs = (month: number): string => {
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+        throw new Error(`Invalid month: ${month}`)
+    }
+    return MONTH_NAMES_ES[month - 1]
+}
+
+export const currentPeriodTenantListHref = (): string => {
+    const today = new Date()
+    return tenantListHref({ year: today.getFullYear(), month: today.getMonth() + 1 })
+}
+
+export const salesReportHref = (period: Period, tenantId: number): string => {
+    return `/monthly-py/year/${period.year}/month/${period.month}/tenant/${tenantId}/sales-report/create/`
+}

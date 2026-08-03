@@ -40,8 +40,8 @@ create table report (
   created_at text default current_timestamp
 );
 
-create unique index report_tenant_kind_date_unique
-  on report (tenant_id, report_kind_id, date);
+create unique index report_tenant_date_unique
+  on report (tenant_id, date);
 
 create table record (
   id integer primary key autoincrement,
@@ -62,7 +62,7 @@ create table record (
 
 
 -- migrate:down
-drop index if exists report_tenant_kind_date_unique;
+drop index if exists report_tenant_date_unique;
 drop table if exists report;
 drop table if exists tenant_report_kind;
 drop table if exists tenant;

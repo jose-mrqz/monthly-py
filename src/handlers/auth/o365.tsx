@@ -1,8 +1,10 @@
 import { Hono, Context } from 'hono'
 import { db } from '../../db'
 import { hash_password, find_user_by_username } from '../auth'
+import { currentPeriodTenantListHref } from '../../types'
+import type { AppEnv } from '../../middleware/session'
 
-export const o365_router = new Hono()
+export const o365_router = new Hono<{ Variables: AppEnv['Variables'] }>()
   .get('/signin/', o365_signin_get)
   .post('/validate/', o365_validate_post)
 
@@ -39,7 +41,11 @@ async function provision_user(username: string): Promise<void> {
   db.query(query).run({ $username: username, $password: hashed })
 }
 
-async function o365_signin_get(c: Context) {
+async function o365_signin_get(c: Context<{ Variables: AppEnv['Variables'] }>) {
+  if (c.get('session').get('userId')) {
+    return c.redirect(currentPeriodTenantListHref())
+  }
+
   const config = load_o365_config()
   if (!config) {
     return c.html(
@@ -85,7 +91,7 @@ async function o365_signin_get(c: Context) {
   )
 }
 
-async function o365_validate_post(c: Context) {
+async function o365_validate_post(c: Context<{ Variables: AppEnv['Variables'] }>) {
   const formData = await c.req.formData()
   const deviceCode = String(formData.get('device_code') ?? '')
 
@@ -149,11 +155,20 @@ async function o365_validate_post(c: Context) {
     }
   }
 
+  const user = find_user_by_username(username)
+  if (!user) {
+    return c.json({ status: 'error', message: 'No se pudo cargar tu cuenta' })
+  }
+
+  const session = c.get('session')
+  session.set('userId', user.id)
+  session.set('username', user.username)
+
   const today = new Date()
   const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const month = today.getMonth() + 1
 
-  return c.json({ status: 'ok', redirect: `/year/${year}/month/${month}/tenant/list/` })
+  return c.json({ status: 'ok', redirect: currentPeriodTenantListHref() })
 }
 
 const O365_POLL_SCRIPT = `

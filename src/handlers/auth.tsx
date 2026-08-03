@@ -1,19 +1,25 @@
 import { Hono, Context } from 'hono'
 import { db } from '../db'
 import { o365_router } from './auth/o365'
+import { currentPeriodTenantListHref } from '../types'
+import type { AppEnv } from '../middleware/session'
 
-export const auth_router = new Hono()
+export const auth_router = new Hono<{ Variables: AppEnv['Variables'] }>()
   .get('/signin/', signin_get)
   .post('/signin/', signin_post)
+  .post('/signout/', signout_post)
 
 auth_router.route('/o365', o365_router)
 
-async function signin_get(c: Context) {
+async function signin_get(c: Context<{ Variables: AppEnv['Variables'] }>) {
+  if (c.get('session').get('userId')) {
+    return c.redirect(currentPeriodTenantListHref())
+  }
   const error = c.req.query('error')
   return c.html(<SigninPage error={error} />)
 }
 
-async function signin_post(c: Context) {
+async function signin_post(c: Context<{ Variables: AppEnv['Variables'] }>) {
   const formData = await c.req.formData()
   const username = String(formData.get('username') ?? '').trim()
   const password = String(formData.get('password') ?? '').trim()
@@ -24,17 +30,28 @@ async function signin_post(c: Context) {
     )
   }
 
-  if (!(await authenticate(username, password))) {
+  const user = await authenticate(username, password)
+  if (!user) {
     return c.html(
       <SigninPage error="Usuario o contraseña incorrectos" username={username} />
     )
   }
 
+  const session = c.get('session')
+  session.set('userId', user.id)
+  session.set('username', user.username)
+
   const today = new Date()
   const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const month = today.getMonth() + 1
 
-  return c.redirect(`/year/${year}/month/${month}/tenant/list/`)
+  return c.redirect(currentPeriodTenantListHref())
+}
+
+async function signout_post(c: Context<{ Variables: AppEnv['Variables'] }>) {
+  c.get('session').deleteSession()
+  c.header('Set-Cookie', 'session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax', { append: true })
+  return c.redirect('/monthly-py/auth/signin/')
 }
 
 type UserRow = {
@@ -56,10 +73,11 @@ export function find_user_by_username(username: string): UserRow | null {
   return db.query(query).get({ $username: username }) as UserRow | null
 }
 
-async function authenticate(username: string, password: string): Promise<boolean> {
+async function authenticate(username: string, password: string): Promise<UserRow | null> {
   const user = find_user_by_username(username)
-  if (!user) return false
-  return verify_password(password, user.password)
+  if (!user) return null
+  const ok = await verify_password(password, user.password)
+  return ok ? user : null
 }
 
 // TODO: move this to state interaction of jsx.
