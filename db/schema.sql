@@ -35,8 +35,8 @@ CREATE TABLE report (
   report_kind_id integer not null references report_kind(id),
   created_at text default current_timestamp
 );
-CREATE UNIQUE INDEX report_tenant_kind_date_unique
-  on report (tenant_id, report_kind_id, date);
+CREATE UNIQUE INDEX report_tenant_date_unique
+  on report (tenant_id, date);
 CREATE TABLE record (
   id integer primary key autoincrement,
   report_id integer not null references report(id),
@@ -54,5 +54,4 @@ CREATE TABLE record (
 );
 -- Dbmate schema migrations
 INSERT INTO "schema_migrations" (version) VALUES
-  ('20260714215645'),
-  ('20260716171411');
+  ('20260714215645');
